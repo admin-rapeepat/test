@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสมุดรถ - ร้านตงมอเตอร์ ยะลา</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* เน้นปรับขนาด Font ทั้งระบบสำหรับผู้ใหญ่ */
+        :root {
+            font-size: 18px; /* ปรับฐานตัวอักษรให้ใหญ่ขึ้นกว่ามาตรฐาน */
+        }
+        
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        /* ขยายขนาดช่องกรอกข้อมูล */
+        .input-line {
+            background: #fff;
+            border-bottom: 3px solid #94a3b8;
+            width: 100%;
+            font-weight: 700;
+            font-size: 1.4rem; /* ใหญ่พิเศษ */
+            color: #000;
+            padding: 12px 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-line:focus {
+            border-bottom-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        /* หัวข้อช่องกรอก */
+        .label-text {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #475569;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* หัวข้อส่วนต่างๆ */
+        .section-header {
+            background: #e2e8f0;
+            padding: 15px 25px;
+            border-left: 10px solid #1e293b;
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-radius: 0 15px 15px 0;
+        }
+
+        /* ปรับปรุง Card หน้าหลักให้ดูง่าย */
+        .green-book-card {
+            background: linear-gradient(145deg, #064e3b 0%, #065f46 100%);
+            border-radius: 20px 50px 50px 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            border-left: 20px solid #022c22;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 220px;
+        }
+
+        .green-book-card:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        /* Modal ให้ตัวหนังสือใหญ่ */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* ข้อความแจ้งเตือน */
+        #toast {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #059669;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        /* ปรับขนาดพื้นที่คลิกของปุ่ม */
+        button {
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+<body class="pb-20">
+
+    <div id="toast">✅ บันทึกสำเร็จ</div>
+
+    <header class="bg-white shadow-md mb-8 border-b-8 border-slate-900">
+        <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+            <div class="flex items-center gap-6">
+                <div class="bg-slate-900 p-5 rounded-3xl text-white text-5xl shadow-lg">📗</div>
+                <div>
+                    <h1 class="text-5xl font-black text-slate-900 tracking-tight">ตงมอเตอร์ ยะลา</h1>
+                    <p class="text-slate-600 text-xl font-bold mt-1">ระบบจัดการสมุดคู่มือจดทะเบียนรถ</p>
+                </div>
+                <button onclick="toggleSettings()" class="p-4 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-all text-3xl">⚙️</button>
+            </div>
+            <button onclick="openForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-12 py-7 rounded-3xl font-black text-3xl shadow-2xl transition-all active:scale-90 w-full md:w-auto">
+                + เพิ่มรถใหม่
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4">
+        <div class="mb-12 flex flex-col md:flex-row gap-6">
+            <div class="relative flex-grow">
+                <span class="absolute left-6 top-1/2 -translate-y-1/2 text-3xl">🔍</span>
+                <input type="text" id="searchInput" oninput="render()" placeholder="ค้นทะเบียน, ยี่ห้อ, ชื่อลูกค้า..." class="w-full p-7 pl-20 rounded-3xl border-4 border-slate-200 text-2xl font-black outline-none focus:border-blue-500 shadow-md">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="setFilter('all')" id="btn-all" class="flex-1 md:flex-none px-8 py-6 rounded-2xl font-black text-xl bg-slate-900 text-white shadow-lg">ทั้งหมด</button>
+                <button onclick="setFilter('ready')" id="btn-ready" class="flex-1 md:flex-none px-8 py-6 rounded-2xl font-black text-xl bg-white border-4 border-slate-200 text-slate-600">พร้อมขาย</button>
+                <button onclick="setFilter('sold')" id="btn-sold" class="flex-1 md:flex-none px-8 py-6 rounded-2xl font-black text-xl bg-white border-4 border-slate-200 text-slate-600">ขายแล้ว</button>
+            </div>
+        </div>
+
+        <div id="grid" class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <!-- Cards will be injected here -->
+        </div>
+    </main>
+
+    <!-- FORM MODAL -->
+    <div id="modal" class="modal-overlay hidden">
+        <div class="bg-white w-full max-w-5xl rounded-[40px] shadow-2xl overflow-hidden my-4 border-4 border-slate-300">
+            <div class="bg-slate-900 p-8 text-white flex justify-between items-center sticky top-0 z-50 border-b-4 border-blue-500">
+                <h2 class="text-4xl font-black">รายละเอียดข้อมูลรถ</h2>
+                <button onclick="closeForm()" class="text-5xl font-bold hover:text-red-400 bg-white/10 w-16 h-16 rounded-full flex items-center justify-center transition-colors">✕</button>
+            </div>
+
+            <form id="carForm" onsubmit="handleSave(event)" class="p-6 md:p-12 space-y-16">
+                <input type="hidden" id="editId">
+                <input type="hidden" id="imageData">
+
+                <!-- Section 1: รายละเอียดตัวรถ -->
+                <section>
+                    <div class="section-header"><span>🏍️</span> รายละเอียดตัวรถ (ซื้อเข้า)</div>
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-10">
+                        <div class="md:col-span-4">
+                            <div onclick="document.getElementById('fileIn').click()" class="aspect-square bg-slate-100 border-4 border-dashed border-slate-400 rounded-[40px] flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 relative overflow-hidden transition-all shadow-inner">
+                                <img id="imgPreview" class="hidden w-full h-full object-cover">
+                                <div id="imgPlaceholder" class="text-center">
+                                    <span class="text-7xl block mb-4">📸</span>
+                                    <span class="text-slate-500 font-black text-xl">กดเพื่อใส่รูปรถ</span>
+                                </div>
+                                <input type="file" id="fileIn" class="hidden" accept="image/*" onchange="processImage(this)">
+                            </div>
+                        </div>
+                        <div class="md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="md:col-span-2">
+                                <label class="label-text">วันที่ซื้อรถเข้า</label>
+                                <input type="text" id="dateBuy" class="input-line" placeholder="เช่น 01/01/2567">
+                            </div>
+                            <div>
+                                <label class="label-text">ยี่ห้อรถ (เช่น HONDA)</label>
+                                <input type="text" id="brand" class="input-line">
+                            </div>
+                            <div>
+                                <label class="label-text">แบบ (เช่น เวฟ 110i)</label>
+                                <input type="text" id="modelType" class="input-line">
+                            </div>
+                            <div>
+                                <label class="label-text">รุ่นปี ค.ศ. (เช่น 2023)</label>
+                                <input type="text" id="yearModel" class="input-line">
+                            </div>
+                            <div>
+                                <label class="label-text">วันจดทะเบียน</label>
+                                <input type="text" id="regDate" class="input-line">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+                        <div class="bg-blue-100 p-5 rounded-3xl border-4 border-blue-300">
+                            <label class="label-text text-blue-900">เลขทะเบียนรถ</label>
+                            <input type="text" id="reg" class="input-line !border-blue-500 font-black !text-3xl uppercase !bg-transparent">
+                        </div>
+                        <div>
+                            <label class="label-text">จังหวัด</label>
+                            <input type="text" id="province" class="input-line">
+                        </div>
+                        <div>
+                            <label class="label-text">สีรถ</label>
+                            <input type="text" id="color" class="input-line">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label-text text-red-700">เลขตัวรถ (Chassis No.)</label>
+                            <input type="text" id="chassis" class="input-line !border-red-300">
+                        </div>
+                        <div>
+                            <label class="label-text">อยู่ที่ (ตำแหน่งเลขตัวรถ)</label>
+                            <input type="text" id="chassisLoc" class="input-line">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label-text text-red-700">เลขเครื่องยนต์ / มอเตอร์</label>
+                            <input type="text" id="engNo" class="input-line !border-red-300">
+                        </div>
+                        <div>
+                            <label class="label-text">ซีซี (CC)</label>
+                            <input type="text" id="cc" class="input-line">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: ข้อมูลเจ้าของเดิม -->
+                <section class="bg-slate-100 p-8 md:p-12 rounded-[40px] border-2 border-slate-200">
+                    <div class="section-header !bg-transparent !p-0 mb-8 !border-slate-400"><span>👤</span> ชื่อเจ้าของเดิม (คนที่ร้านซื้อต่อมา)</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="md:col-span-2">
+                            <label class="label-text">ชื่อ-นามสกุล เจ้าของเดิม</label>
+                            <input type="text" id="prevOwner" class="input-line !bg-transparent">
+                        </div>
+                        <div>
+                            <label class="label-text">เลขที่บัตรประชาชน</label>
+                            <input type="text" id="prevId" class="input-line !bg-transparent">
+                        </div>
+                        <div>
+                            <label class="label-text">วันเกิด / สัญชาติ</label>
+                            <input type="text" id="prevBirth" class="input-line !bg-transparent" placeholder="วันเกิด / สัญชาติ">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label-text">ที่อยู่เจ้าของเดิม</label>
+                            <textarea id="prevAddr" class="input-line !bg-transparent" rows="2"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: รายละเอียดการขาย -->
+                <section class="border-8 border-blue-600 p-8 md:p-14 rounded-[60px] relative bg-white shadow-2xl">
+                    <div class="text-center mb-12">
+                        <h3 class="text-5xl font-black text-slate-900">สัญญาจะซื้อจะขาย</h3>
+                        <p class="text-2xl font-black text-blue-700 mt-4 tracking-wider">ร้านตงมอเตอร์ ยะลา</p>
+                        <p class="text-xl font-bold text-slate-500">โทร 073-214391</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                        <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+                            <label class="label-text text-slate-900">เล่มที่</label>
+                            <input type="text" id="bookNo" class="input-line !bg-transparent">
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+                            <label class="label-text text-slate-900">เลขที่</label>
+                            <input type="text" id="itemNo" class="input-line !bg-transparent">
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+                            <label class="label-text text-slate-900">วันที่ขาย</label>
+                            <input type="text" id="soldDate" class="input-line !bg-transparent">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                        <div class="md:col-span-3">
+                            <label class="label-text text-blue-900 font-black text-2xl mb-4">🛒 ชื่อลูกค้า (ผู้ซื้อใหม่)</label>
+                            <input type="text" id="owner" class="input-line !text-4xl !border-blue-700 font-black" placeholder="ชื่อลูกค้า">
+                        </div>
+                        <div class="bg-amber-100 p-6 rounded-3xl border-4 border-amber-400 shadow-lg">
+                            <label class="label-text text-amber-900 font-black text-xl mb-3">💰 ราคาขาย</label>
+                            <input type="number" id="salePrice" class="input-line !bg-transparent font-black !text-4xl !text-amber-900 !border-amber-600" placeholder="0">
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="label-text text-slate-900">ที่อยู่ผู้ซื้อ</label>
+                            <textarea id="ownerAddr" class="input-line" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-12">
+                        <label class="label-text font-black text-slate-900 text-2xl mb-6">การโอนทะเบียนรถ</label>
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <div class="flex gap-4 flex-1">
+                                <button type="button" onclick="setTransfer('โอนเอง')" id="btnSelf" class="flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-slate-200 transition-all bg-white text-slate-400">ลูกค้าโอนเอง</button>
+                                <button type="button" onclick="setTransfer('โอนให้')" id="btnShop" class="flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-slate-200 transition-all bg-white text-slate-400">ร้านโอนให้</button>
+                                <input type="hidden" id="transferType" value="โอนเอง">
+                            </div>
+                            <div id="transferInputWrap" class="flex-[1.2] w-full hidden">
+                                <input type="text" id="transferNote" class="input-line !border-blue-500 !p-6 rounded-3xl" placeholder="ระบุค่าโอน/หมายเหตุ...">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 4: รับเล่ม -->
+                <div class="bg-red-100 p-10 rounded-[50px] border-4 border-red-300 flex flex-col items-center shadow-xl">
+                    <label class="text-3xl font-black text-red-800 mb-6 italic underline underline-offset-8">📅 วันที่ลูกค้ามารับเล่มทะเบียนจริง</label>
+                    <input type="text" id="receiveBook" class="input-line !text-center !text-5xl !font-black !text-red-700 !border-red-600 bg-white rounded-3xl p-6 max-w-lg shadow-inner" placeholder="วว/ดด/ปป">
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col md:flex-row gap-6 pt-10">
+                    <button type="button" onclick="closeForm()" class="flex-1 py-8 rounded-[30px] bg-slate-200 text-slate-600 font-black text-3xl active:scale-90 transition-all shadow-md">ยกเลิก</button>
+                    <button type="submit" class="flex-[2] py-8 rounded-[30px] bg-emerald-600 text-white font-black text-4xl shadow-2xl shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all">✅ บันทึกข้อมูล</button>
+                </div>
+
+                <button type="button" id="delBtn" onclick="deleteItem()" class="hidden w-full text-red-500 font-black text-2xl p-6 hover:bg-red-50 rounded-2xl transition-all border-2 border-transparent hover:border-red-200">🗑️ ลบข้อมูลคันนี้ออกจากระบบ</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal-overlay hidden">
+        <div class="bg-white w-full max-w-md rounded-[50px] shadow-2xl overflow-hidden my-auto border-4 border-slate-900 p-10">
+            <h3 class="text-3xl font-black mb-8 text-center underline">การตั้งค่าระบบ</h3>
+            <div class="space-y-6">
+                <button onclick="exportData()" class="w-full bg-blue-100 hover:bg-blue-200 p-7 rounded-[30px] font-black text-2xl text-blue-800 flex justify-between items-center transition-all shadow-md">
+                    <span>📤 สำรองข้อมูล</span>
+                    <span class="text-4xl">💾</span>
+                </button>
+                <div class="relative">
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(this)">
+                    <button onclick="document.getElementById('importFile').click()" class="w-full bg-emerald-100 hover:bg-emerald-200 p-7 rounded-[30px] font-black text-2xl text-emerald-800 flex justify-between items-center transition-all shadow-md">
+                        <span>📥 นำเข้าข้อมูล</span>
+                        <span class="text-4xl">📂</span>
+                    </button>
+                </div>
+            </div>
+            <button onclick="toggleSettings()" class="w-full mt-10 p-5 text-slate-400 font-black text-xl hover:text-slate-800">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <script>
+        let db = [];
+        const STORAGE_KEY = 'TONG_MOTOR_V3_LARGE';
+
+        function load() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                db = raw ? JSON.parse(raw) : [];
+                if (typeof db === 'string') db = JSON.parse(db);
+                if (!Array.isArray(db)) db = [];
+            } catch (e) { db = []; }
+        }
+        load();
+
+        let currentFilter = 'all';
+
+        function showToast(text) {
+            const t = document.getElementById('toast');
+            t.innerText = text;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        function setFilter(f) {
+            currentFilter = f;
+            ['all', 'ready', 'sold'].forEach(btn => {
+                const el = document.getElementById('btn-' + btn);
+                if (btn === f) {
+                    el.className = "px-8 py-6 rounded-2xl font-black text-xl bg-slate-900 text-white shadow-lg";
+                } else {
+                    el.className = "px-8 py-6 rounded-2xl font-black text-xl bg-white border-4 border-slate-200 text-slate-600";
+                }
+            });
+            render();
+        }
+
+        function setTransfer(val) {
+            document.getElementById('transferType').value = val;
+            const shopBtn = document.getElementById('btnShop');
+            const selfBtn = document.getElementById('btnSelf');
+            const wrap = document.getElementById('transferInputWrap');
+
+            if (val === 'โอนให้') {
+                shopBtn.className = "flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-blue-600 bg-blue-600 text-white shadow-xl scale-105 transition-all";
+                selfBtn.className = "flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-slate-200 bg-white text-slate-300";
+                wrap.classList.remove('hidden');
+            } else {
+                selfBtn.className = "flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-blue-600 bg-blue-600 text-white shadow-xl scale-105 transition-all";
+                shopBtn.className = "flex-1 py-6 rounded-3xl font-black text-2xl border-4 border-slate-200 bg-white text-slate-300";
+                wrap.classList.add('hidden');
+            }
+        }
+
+        function processImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height, max = 1000;
+                    if (w > max || h > max) {
+                        if (w > h) { h *= max/w; w = max; } else { w *= max/h; h = max; }
+                    }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const b64 = canvas.toDataURL('image/jpeg', 0.8);
+                    document.getElementById('imgPreview').src = b64;
+                    document.getElementById('imgPreview').classList.remove('hidden');
+                    document.getElementById('imgPlaceholder').classList.add('hidden');
+                    document.getElementById('imageData').value = b64;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleSave(e) {
+            e.preventDefault();
+            const id = document.getElementById('editId').value || Date.now().toString();
+            
+            const item = {
+                id,
+                dateBuy: document.getElementById('dateBuy').value,
+                brand: document.getElementById('brand').value,
+                modelType: document.getElementById('modelType').value,
+                yearModel: document.getElementById('yearModel').value,
+                regDate: document.getElementById('regDate').value,
+                reg: document.getElementById('reg').value || "รอดำเนินการ",
+                province: document.getElementById('province').value,
+                color: document.getElementById('color').value,
+                chassis: document.getElementById('chassis').value,
+                chassisLoc: document.getElementById('chassisLoc').value,
+                engNo: document.getElementById('engNo').value,
+                cc: document.getElementById('cc').value,
+                prevOwner: document.getElementById('prevOwner').value,
+                prevId: document.getElementById('prevId').value,
+                prevBirth: document.getElementById('prevBirth').value,
+                prevAddr: document.getElementById('prevAddr').value,
+                bookNo: document.getElementById('bookNo').value,
+                itemNo: document.getElementById('itemNo').value,
+                soldDate: document.getElementById('soldDate').value,
+                owner: document.getElementById('owner').value,
+                salePrice: document.getElementById('salePrice').value,
+                ownerAddr: document.getElementById('ownerAddr').value,
+                transferType: document.getElementById('transferType').value,
+                transferNote: document.getElementById('transferNote').value,
+                receiveBook: document.getElementById('receiveBook').value,
+                img: document.getElementById('imageData').value
+            };
+
+            const idx = db.findIndex(x => x.id === id);
+            if (idx > -1) db[idx] = item; else db.push(item);
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            showToast("✅ บันทึกสำเร็จ");
+            closeForm();
+            render();
+        }
+
+        function render() {
+            const grid = document.getElementById('grid');
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            grid.innerHTML = "";
+
+            let list = db.filter(i => 
+                (i.reg||'').toLowerCase().includes(query) ||
+                (i.brand||'').toLowerCase().includes(query) ||
+                (i.owner||'').toLowerCase().includes(query)
+            );
+
+            if (currentFilter === 'ready') list = list.filter(i => !i.owner);
+            else if (currentFilter === 'sold') list = list.filter(i => !!i.owner);
+
+            list.sort((a,b) => b.id - a.id).forEach(item => {
+                const card = document.createElement('div');
+                card.className = "green-book-card p-8 flex gap-8 relative overflow-hidden";
+                card.onclick = () => editItem(item.id);
+                
+                const isSold = !!item.owner;
+                const statusColor = isSold ? 'bg-red-500' : 'bg-emerald-500';
+                const statusText = isSold ? 'ขายแล้ว' : 'พร้อมขาย';
+
+                card.innerHTML = `
+                    <div class="w-40 h-40 rounded-3xl bg-white/20 flex-shrink-0 overflow-hidden border-4 border-white/20 shadow-inner">
+                        ${item.img ? `<img src="${item.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-7xl opacity-50">🏍️</div>`}
+                    </div>
+                    <div class="flex-grow text-white">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-4xl font-black tracking-tighter">${item.reg}</h3>
+                            <span class="${statusColor} px-5 py-2 rounded-full text-sm font-black uppercase tracking-widest shadow-lg border border-white/20">${statusText}</span>
+                        </div>
+                        <p class="text-amber-300 font-black text-2xl uppercase">${item.brand || '-'} <span class="text-white/70">${item.modelType || ''}</span></p>
+                        <div class="mt-4 pt-4 border-t border-white/10">
+                            <p class="text-white/60 font-bold text-xl truncate">ลูกค้า: <span class="text-white font-black">${item.owner || '---'}</span></p>
+                            ${item.salePrice ? `<p class="mt-2 text-3xl font-black text-amber-400">฿${Number(item.salePrice).toLocaleString()}</p>` : ''}
+                        </div>
+                        ${item.receiveBook ? `<div class="mt-3 inline-block bg-white/10 px-3 py-1 rounded-lg text-sm font-bold text-emerald-300 italic border border-emerald-500/30">📗 รับเล่มแล้ว</div>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function editItem(id) {
+            const item = db.find(i => i.id === id);
+            if (!item) return;
+
+            openForm();
+            document.getElementById('editId').value = item.id;
+            document.getElementById('dateBuy').value = item.dateBuy || "";
+            document.getElementById('brand').value = item.brand || "";
+            document.getElementById('modelType').value = item.modelType || "";
+            document.getElementById('yearModel').value = item.yearModel || "";
+            document.getElementById('regDate').value = item.regDate || "";
+            document.getElementById('reg').value = item.reg || "";
+            document.getElementById('province').value = item.province || "";
+            document.getElementById('color').value = item.color || "";
+            document.getElementById('chassis').value = item.chassis || "";
+            document.getElementById('chassisLoc').value = item.chassisLoc || "";
+            document.getElementById('engNo').value = item.engNo || "";
+            document.getElementById('cc').value = item.cc || "";
+            document.getElementById('prevOwner').value = item.prevOwner || "";
+            document.getElementById('prevId').value = item.prevId || "";
+            document.getElementById('prevBirth').value = item.prevBirth || "";
+            document.getElementById('prevAddr').value = item.prevAddr || "";
+            document.getElementById('bookNo').value = item.bookNo || "";
+            document.getElementById('itemNo').value = item.itemNo || "";
+            document.getElementById('soldDate').value = item.soldDate || "";
+            document.getElementById('owner').value = item.owner || "";
+            document.getElementById('salePrice').value = item.salePrice || "";
+            document.getElementById('ownerAddr').value = item.ownerAddr || "";
+            document.getElementById('transferNote').value = item.transferNote || "";
+            document.getElementById('receiveBook').value = item.receiveBook || "";
+            setTransfer(item.transferType || 'โอนเอง');
+
+            if (item.img) {
+                document.getElementById('imgPreview').src = item.img;
+                document.getElementById('imgPreview').classList.remove('hidden');
+                document.getElementById('imgPlaceholder').classList.add('hidden');
+                document.getElementById('imageData').value = item.img;
+            }
+            document.getElementById('delBtn').classList.remove('hidden');
+        }
+
+        function deleteItem() {
+            if (confirm('⚠️ ยืนยันการลบข้อมูลนี้อย่างถาวรหรือไม่?')) {
+                const id = document.getElementById('editId').value;
+                db = db.filter(x => x.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+                closeForm();
+                render();
+                showToast("🗑️ ลบข้อมูลเรียบร้อย");
+            }
+        }
+
+        function openForm() {
+            document.getElementById('modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeForm() {
+            document.getElementById('modal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            document.getElementById('carForm').reset();
+            document.getElementById('editId').value = "";
+            document.getElementById('imageData').value = "";
+            document.getElementById('imgPreview').classList.add('hidden');
+            document.getElementById('imgPlaceholder').classList.remove('hidden');
+            document.getElementById('delBtn').classList.add('hidden');
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsModal').classList.toggle('hidden');
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(db, null, 2);
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ตงมอเตอร์_สำรอง_${new Date().toLocaleDateString('th-TH').replace(/\//g,'-')}.json`;
+            a.click();
+            showToast("💾 สำรองข้อมูลเรียบร้อย");
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    let imported = JSON.parse(e.target.result);
+                    if (typeof imported === 'string') imported = JSON.parse(imported);
+                    if (Array.isArray(imported)) {
+                        if (confirm(`พบข้อมูล ${imported.length} คัน ต้องการเขียนทับข้อมูลที่มีอยู่หรือไม่?`)) {
+                            db = imported;
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+                            render();
+                            showToast("📂 นำเข้าข้อมูลสำเร็จ");
+                            toggleSettings();
+                        }
+                    }
+                } catch (err) { alert("ไฟล์ไม่ถูกต้อง"); }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
